@@ -17,7 +17,7 @@ PDF_TEMPLATE = "certificate.pdf"
 # =====================================================================
 # 🌐 GOOGLE SHEETS LIVE APPS SCRIPT API EDGE CONFIGURATION
 # =====================================================================
-API_URL = "https://google.com"
+API_URL = "https://script.google.com/macros/s/AKfycby5tDN-X50j5CRd3nXI0OFD-5-3nApc_6RCxtRSD_Vg1eejJs03LEoI0LOhmVRzvg8l/exec"
 # =====================================================================
 
 HTML_FORM = """
