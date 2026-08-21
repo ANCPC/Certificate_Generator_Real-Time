@@ -1,6 +1,7 @@
 import os
 import json
 import hashlib
+import threading
 from io import BytesIO
 from datetime import datetime
 import requests
@@ -11,13 +12,13 @@ from reportlab.lib.pagesizes import A4, landscape
 
 app = Flask(__name__)
 
+# Base Graphic Template Target (Must be uploaded to your root folder)
 PDF_TEMPLATE = "certificate.pdf"
 
 # =====================================================================
-# 🌐 GOOGLE SHEETS LIVE CONFIG (DISABLED DURING LIVE RUSH TO PREVENT CRASH)
+# 🌐 GOOGLE SHEETS LIVE APPS SCRIPT API CONFIGURATION
 # =====================================================================
-API_URL = "https://google.com"
-USE_LIVE_API = False  # 🔴 SET TO TRUE ONLY AFTER THE WORKSHOP RUSH IS OVER
+API_URL = "https://script.google.com/macros/s/AKfycby5tDN-X50j5CRd3nXI0OFD-5-3nApc_6RCxtRSD_Vg1eejJs03LEoI0LOhmVRzvg8l/exec"
 # =====================================================================
 
 # PRE-LOAD TEMPLATE INTO RAM AT STARTUP (Saves massive disk CPU cycles)
@@ -49,8 +50,8 @@ HTML_FORM = """
 </head>
 <body>
     <div class="card">
-        <h2>CryptX Club</h2>
-        <p>Cyber Security Workshop on Bug Bounty Hunting & Research Methodology</p>
+        <h2>Graphic Era University</h2>
+        <p>Real-Time Workshop Certification Engine</p>
         <form method="POST" action="/generate">
             <div class="form-group">
                 <label>Full Name</label>
@@ -74,11 +75,23 @@ HTML_FORM = """
             </div>
             <button type="submit">Verify & Generate Certificate</button>
         </form>
-        <div class="footer-note">Secured by ANCPC</div>
+        <div class="footer-note">Secured by cryptographic real-time sheet hashing ledger.</div>
     </div>
 </body>
 </html>
 """
+
+def send_to_sheets_background(payload):
+    """Runs asynchronously in the background so students don't face server delays."""
+    try:
+        requests.post(
+            API_URL, 
+            data=json.dumps(payload), 
+            headers={"Content-Type": "application/json"},
+            timeout=15
+        )
+    except Exception as e:
+        print(f"Background sheet sync failed: {e}")
 
 @app.route('/')
 def home():
@@ -95,34 +108,25 @@ def generate():
     if not all([user_name, uni_roll, sec_roll, section, semester]):
         return "All field variables are strictly mandatory.", 400
 
+    # 1. Generate unique hash locally and instantly (Takes under 1 millisecond)
+    emergency_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    emergency_payload = f"{user_name}|{uni_roll}|{emergency_time}"
+    assigned_hash = f"GEU-LIVE-{hashlib.sha256(emergency_payload.encode('utf-8')).hexdigest()[:6].upper()}"
+
+    # 2. Package database mapping transmission payload including the hash
     user_payload = {
         "name": user_name,
         "uni_roll": str(uni_roll),
         "sec_roll": str(sec_roll),
         "section": section,
-        "semester": semester
+        "semester": semester,
+        "generated_hash": assigned_hash
     }
 
-    assigned_hash = "GEU-ERROR"
-    
-    # Fast bypass processing engine selection
-    if USE_LIVE_API:
-        try:
-            response = requests.post(API_URL, data=json.dumps(user_payload), headers={"Content-Type": "application/json"}, timeout=4)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("status") == "success":
-                    assigned_hash = result.get("generated_hash", "GEU-UNKNOWN")
-        except Exception:
-            pass
+    # 3. Spin up background worker thread for Google Sheets mapping (Non-blocking)
+    threading.Thread(target=send_to_sheets_background, args=(user_payload,)).start()
 
-    # Instant Local Fallback (Used during the rush to handle traffic seamlessly)
-    if assigned_hash in ["GEU-ERROR", "GEU-UNKNOWN"]:
-        emergency_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        emergency_payload = f"{user_name}|{uni_roll}|{emergency_time}"
-        assigned_hash = f"GEU-LIVE-{hashlib.sha256(emergency_payload.encode('utf-8')).hexdigest()[:6].upper()}"
-
-    # Use pre-loaded RAM cache instead of opening disk file over and over
+    # 4. Handle Landscape layout dimension vectors tracking rules
     if TEMPLATE_BYTES:
         reader = PdfReader(BytesIO(TEMPLATE_BYTES))
     elif os.path.exists(PDF_TEMPLATE):
@@ -136,12 +140,15 @@ def generate():
     a4_width, a4_height = landscape(A4)
     center_x = a4_width / 2
 
+    # 5. Overlap modifications layout building processing engine mapping
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=(first_page.mediabox.width, first_page.mediabox.height))
     
+    # Stamp candidate name perfectly at confirmed height coordinate 280
     can.setFont("Helvetica", 24)
     can.drawCentredString(center_x, 280, user_name)
     
+    # Stamp secure verification crypto ID signature near bottom baseline
     can.setFont("Helvetica", 10)
     can.setFillColorRGB(0.4, 0.4, 0.4)
     can.drawCentredString(center_x, 40, f"VERIFICATION ID: {assigned_hash}")
@@ -149,10 +156,12 @@ def generate():
     can.save()
     packet.seek(0)
     
+    # 6. Compile composite file payload output layer streaming pipe
     text_layer_pdf = PdfReader(packet)
     first_page.merge_page(text_layer_pdf.pages[0])
     writer.add_page(first_page)
     
+    # Cascade process lingering background files structures cleanly if multidocument sheets
     for page_num in range(1, len(reader.pages)):
         writer.add_page(reader.pages[page_num])
         
