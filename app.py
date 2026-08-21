@@ -42,8 +42,8 @@ HTML_FORM = """
 </head>
 <body>
     <div class="card">
-        <h2>Graphic Era University</h2>
-        <p>Real-Time Workshop Certification Engine</p>
+        <h2>CryptX Club</h2>
+        <p>Cyber Security Workshop on Bug Bounty Hunting & Research Methodology</p>
         <form method="POST" action="/generate">
             <div class="form-group">
                 <label>Full Name</label>
@@ -67,7 +67,7 @@ HTML_FORM = """
             </div>
             <button type="submit">Verify & Generate Certificate</button>
         </form>
-        <div class="footer-note">Secured by cryptographic real-time sheet hashing ledger.</div>
+        <div class="footer-note">Secured by ANCPC</div>
     </div>
 </body>
 </html>
