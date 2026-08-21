@@ -11,14 +11,21 @@ from reportlab.lib.pagesizes import A4, landscape
 
 app = Flask(__name__)
 
-# Base Graphic Template Target (Must be uploaded to your root folder)
 PDF_TEMPLATE = "certificate.pdf"
 
 # =====================================================================
-# 🌐 GOOGLE SHEETS LIVE APPS SCRIPT API EDGE CONFIGURATION
+# 🌐 GOOGLE SHEETS LIVE CONFIG (DISABLED DURING LIVE RUSH TO PREVENT CRASH)
 # =====================================================================
-API_URL = "https://script.google.com/macros/s/AKfycby5tDN-X50j5CRd3nXI0OFD-5-3nApc_6RCxtRSD_Vg1eejJs03LEoI0LOhmVRzvg8l/exec"
+API_URL = "https://google.com"
+USE_LIVE_API = False  # 🔴 SET TO TRUE ONLY AFTER THE WORKSHOP RUSH IS OVER
 # =====================================================================
+
+# PRE-LOAD TEMPLATE INTO RAM AT STARTUP (Saves massive disk CPU cycles)
+if os.path.exists(PDF_TEMPLATE):
+    with open(PDF_TEMPLATE, "rb") as f:
+        TEMPLATE_BYTES = f.read()
+else:
+    TEMPLATE_BYTES = None
 
 HTML_FORM = """
 <!DOCTYPE html>
@@ -79,7 +86,6 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    # 1. Collect inputs cleanly
     user_name = request.form.get('username', '').strip()
     uni_roll = request.form.get('uni_roll', '').strip()
     sec_roll = request.form.get('sec_roll', '').strip()
@@ -89,7 +95,6 @@ def generate():
     if not all([user_name, uni_roll, sec_roll, section, semester]):
         return "All field variables are strictly mandatory.", 400
 
-    # 2. Package database mapping transmission payload
     user_payload = {
         "name": user_name,
         "uni_roll": str(uni_roll),
@@ -98,46 +103,45 @@ def generate():
         "semester": semester
     }
 
-    # 3. Synchronously route parameters to Google Sheets Web App Endpoint
     assigned_hash = "GEU-ERROR"
-    try:
-        response = requests.post(
-            API_URL, 
-            data=json.dumps(user_payload), 
-            headers={"Content-Type": "application/json"},
-            timeout=10
-        )
-        if response.status_code == 200:
-            result = response.json()
-            if result.get("status") == "success":
-                assigned_hash = result.get("generated_hash", "GEU-UNKNOWN")
-    except Exception as api_exception:
-        print(f"Bypass fallback triggered due to network loss: {api_exception}")
-        # Local emergency hash generation scheme block if Google drops connection during active event traffic
+    
+    # Fast bypass processing engine selection
+    if USE_LIVE_API:
+        try:
+            response = requests.post(API_URL, data=json.dumps(user_payload), headers={"Content-Type": "application/json"}, timeout=4)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("status") == "success":
+                    assigned_hash = result.get("generated_hash", "GEU-UNKNOWN")
+        except Exception:
+            pass
+
+    # Instant Local Fallback (Used during the rush to handle traffic seamlessly)
+    if assigned_hash in ["GEU-ERROR", "GEU-UNKNOWN"]:
         emergency_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         emergency_payload = f"{user_name}|{uni_roll}|{emergency_time}"
-        assigned_hash = f"GEU-EMERG-{hashlib.sha256(emergency_payload.encode('utf-8')).hexdigest()[:6].upper()}"
+        assigned_hash = f"GEU-LIVE-{hashlib.sha256(emergency_payload.encode('utf-8')).hexdigest()[:6].upper()}"
 
-    # 4. Handle Landscape layout dimension vectors tracking rules
-    if not os.path.exists(PDF_TEMPLATE):
+    # Use pre-loaded RAM cache instead of opening disk file over and over
+    if TEMPLATE_BYTES:
+        reader = PdfReader(BytesIO(TEMPLATE_BYTES))
+    elif os.path.exists(PDF_TEMPLATE):
+        reader = PdfReader(PDF_TEMPLATE)
+    else:
         return f"Error: Template master binary file '{PDF_TEMPLATE}' is missing from the server root.", 500
         
-    reader = PdfReader(PDF_TEMPLATE)
     writer = PdfWriter()
     first_page = reader.pages[0]
     
     a4_width, a4_height = landscape(A4)
     center_x = a4_width / 2
 
-    # 5. Overlap modifications layout building processing engine mapping
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=(first_page.mediabox.width, first_page.mediabox.height))
     
-    # Stamp candidate name perfectly at confirmed height coordinate 280
     can.setFont("Helvetica", 24)
     can.drawCentredString(center_x, 280, user_name)
     
-    # Stamp secure verification crypto ID signature near bottom baseline
     can.setFont("Helvetica", 10)
     can.setFillColorRGB(0.4, 0.4, 0.4)
     can.drawCentredString(center_x, 40, f"VERIFICATION ID: {assigned_hash}")
@@ -145,12 +149,10 @@ def generate():
     can.save()
     packet.seek(0)
     
-    # 6. Compile composite file payload output layer streaming pipe
     text_layer_pdf = PdfReader(packet)
     first_page.merge_page(text_layer_pdf.pages[0])
     writer.add_page(first_page)
     
-    # Cascade process lingering background files structures cleanly if multidocument sheets
     for page_num in range(1, len(reader.pages)):
         writer.add_page(reader.pages[page_num])
         
@@ -167,7 +169,5 @@ def generate():
     )
 
 if __name__ == '__main__':
-    # Render binds port dynamically via environment variables
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-
